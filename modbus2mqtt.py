@@ -38,12 +38,15 @@ import random
 import ssl
 import math
 import struct
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 import addToHomeAssistant
 
 from pymodbus.pdu import ModbusRequest
-from pymodbus.client.sync import ModbusSerialClient as SerialModbusClient
-from pymodbus.client.sync import ModbusTcpClient as TCPModbusClient
+from pymodbus.client import ModbusSerialClient as SerialModbusClient
+from pymodbus.client import ModbusTcpClient as TCPModbusClient
 from pymodbus.transaction import ModbusRtuFramer
 
 version="0.5"
@@ -65,7 +68,7 @@ parser.add_argument('--tcp', help='Act as a Modbus TCP master, connecting to hos
 parser.add_argument('--tcp-port', default='502', type=int, help='Port for MODBUS TCP. Defaults to 502')
 parser.add_argument('--set-modbus-timeout',default='1',type=float, help='Response time-out for MODBUS devices')
 parser.add_argument('--config', required=True, help='Configuration file. Required!')
-parser.add_argument('--verbosity', default='3', type=int, help='Verbose level, 0=silent, 1=errors only, 2=connections, 3=mb writes, 4=all')
+parser.add_argument('--verbosity', default='1', type=int, help='Verbose level, 0=silent, 1=errors only, 2=connections, 3=mb writes, 4=all')
 parser.add_argument('--autoremove',action='store_true',help='Automatically remove poller if modbus communication has failed three times. Removed pollers can be reactivated by sending "True" or "1" to topic modbus/reset-autoremove')
 parser.add_argument('--add-to-homeassistant',action='store_true',help='Add devices to Home Assistant using Home Assistant\'s MQTT-Discovery')
 parser.add_argument('--set-loop-break',default='0.01',type=float, help='Set pause in main polling loop. Defaults to 10ms.')
@@ -237,7 +240,12 @@ class Poller:
                             ref.checkPublish(val)
                     else:
                         if verbosity>=1:
+                            # print("Read MODBUS, FC:"+str(self.functioncode)+", DataType:"+str(self.dataType)+", ref:"+str(self.reference)+", Qty:"+str(self.size)+", SI:"+str(self.slaveid))
                             print("Slave device "+str(self.slaveid)+" responded with error code: "+str(result.function_code))
+#                            print("Result:", result.registers)
+#                            print("Read MODBUS, DATA:"+str(data))
+#                            val = data[ref.relativeReference:(ref.length+ref.relativeReference)]
+#                            print("XXX ", val)
                 except:
                     failed = True
                     if verbosity>=1:
@@ -259,6 +267,7 @@ class Poller:
                         p.failCount(p.failed)
                     if verbosity >= 1:
                         print("MODBUS connection error, trying again...")
+            # print("//// FINISHED poll() ////")
 
     def checkPoll(self):
         if time.clock_gettime(0) >= self.next_due and not self.disabled:
